@@ -8,9 +8,11 @@
 package main
 
 import (
-	"github.com/nasrat_v/maktaba-android-mvp/src/user"
+	"github.com/nasrat_v/maktaba-android-mvp/src/services/database"
+	"github.com/nasrat_v/maktaba-android-mvp/src/services/routes"
 )
 
 func main() {
-	user.InitUserRouter()
+	database.InitDbHandlerForControllers()
+	routes.InitRouterForControllers()
 }
