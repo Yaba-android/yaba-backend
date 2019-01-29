@@ -20,6 +20,21 @@ type User struct {
 
 var connection *pgx.Conn
 
+// UserExist check if user with this ID exist in database
+func UserExist(ID string) bool {
+	rows, err := connection.Query("SELECT * FROM users WHERE user_id=$1", ID)
+	if err != nil {
+		fmt.Println("Unable to check if UserExist: ", err)
+		return (false)
+	}
+	for rows.Next() {
+		rows.Close()
+		return (true)
+	}
+	rows.Close()
+	return (false)
+}
+
 // ConvertUserDBToUser iterate throw query result and convert user in database to user in backend
 func ConvertUserDBToUser(rows *pgx.Rows, users *[]User) bool {
 	var user User
@@ -35,6 +50,7 @@ func ConvertUserDBToUser(rows *pgx.Rows, users *[]User) bool {
 		*users = append(*users, user)
 		status = true
 	}
+	rows.Close()
 	return (status)
 }
 
@@ -96,6 +112,11 @@ func DeleteUser(response http.ResponseWriter, request *http.Request) {
 	params := mux.Vars(request)
 
 	response.Header().Set("Content-type", "application/json")
+	if !UserExist(params["id"]) {
+		fmt.Println("Unable to DeleteUser: User with this ID doesn't exist")
+		json.NewEncoder(response).Encode(http.StatusBadRequest)
+		return
+	}
 	_, err := connection.Exec("DELETE FROM users WHERE user_id=$1", params["id"])
 	if err != nil {
 		fmt.Println("Unable to exec DeleteUser query: ", err)
