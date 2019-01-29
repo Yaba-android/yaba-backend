@@ -18,50 +18,77 @@ type User struct {
 	Password string `json:"password"`
 }
 
-var users []User
 var connection *pgx.Conn
 
-func mockUserData() {
-	users = append(users, User{ID: "123", Email: "fake@exemple.com", Password: "lalala"})
-	users = append(users, User{ID: "456", Email: "shake@exemple.com", Password: "tititi"})
+// ConvertUserDBToUser iterate throw query result and convert user in database to user in backend
+func ConvertUserDBToUser(rows *pgx.Rows, users *[]User) bool {
+	var user User
+	var ID uint32
+	status := false
+
+	for rows.Next() {
+		err := rows.Scan(&ID, &user.Email, &user.Password)
+		if err != nil {
+			fmt.Println("Unable to find user: ", err)
+		}
+		user.ID = fmt.Sprint(ID) // convert serial (uint32) to string
+		*users = append(*users, user)
+		status = true
+	}
+	return (status)
+}
+
+// EncodeUserResponse encode response with result or error
+func EncodeUserResponse(rows *pgx.Rows, response *http.ResponseWriter) {
+	var users []User
+
+	(*response).Header().Set("Content-type", "application/json")
+	if ConvertUserDBToUser(rows, &users) {
+		json.NewEncoder(*response).Encode(users)
+	} else {
+		json.NewEncoder(*response).Encode(http.StatusBadRequest)
+	}
 }
 
 // GetUsers find all users
 func GetUsers(response http.ResponseWriter, request *http.Request) {
-	var user User
-	rows, _ := connection.Query("SELECT * FROM users")
+	rows, err := connection.Query("SELECT * FROM users")
 
-	for rows.Next() {
-		rows.Scan(&user.ID, &user.Email, &user.Password)
-		users = append(users, user)
+	if err != nil {
+		fmt.Println("Unable to exec GetUsers query: ", err)
 	}
-	response.Header().Set("Content-type", "application/json")
-	json.NewEncoder(response).Encode(users)
+	EncodeUserResponse(rows, &response)
 }
 
 // GetUser find one user
 func GetUser(response http.ResponseWriter, request *http.Request) {
 	params := mux.Vars(request)
+	rows, err := connection.Query("SELECT * FROM users WHERE user_id=$1", params["id"])
 
-	response.Header().Set("Content-type", "application/json")
-	for index := range users {
-		if users[index].ID == params["id"] {
-			json.NewEncoder(response).Encode(index)
-			return
-		}
+	if err != nil {
+		fmt.Println("Unable to exec GetUser query: ", err)
 	}
-	json.NewEncoder(response).Encode(User{})
+	EncodeUserResponse(rows, &response)
 }
 
 // CreateUser create a new user
 func CreateUser(response http.ResponseWriter, request *http.Request) {
 	var newUser User
 
-	connection.Exec("INSERT INTO users")
 	response.Header().Set("Content-type", "application/json")
 	json.NewDecoder(request.Body).Decode(&newUser)
-	users = append(users, newUser)
-	json.NewEncoder(response).Encode(newUser)
+	if newUser.Email == "" || newUser.Password == "" {
+		fmt.Println("Unable CreateUser: Email or Password cannot be empty")
+		json.NewEncoder(response).Encode(http.StatusBadRequest)
+		return
+	}
+	_, err := connection.Exec("INSERT INTO users(user_id, email, password) values($1, $2, $3)", newUser.ID, newUser.Email, newUser.Password)
+	if err != nil {
+		fmt.Println("Unable to exec CreateUser query: ", err)
+		json.NewEncoder(response).Encode(http.StatusBadRequest)
+		return
+	}
+	json.NewEncoder(response).Encode(http.StatusAccepted)
 }
 
 // DeleteUser remove one user
@@ -69,13 +96,13 @@ func DeleteUser(response http.ResponseWriter, request *http.Request) {
 	params := mux.Vars(request)
 
 	response.Header().Set("Content-type", "application/json")
-	for index := range users {
-		if users[index].ID == params["id"] {
-			users = append(users[:index], users[index+1:]...)
-			break
-		}
+	_, err := connection.Exec("DELETE FROM users WHERE user_id=$1", params["id"])
+	if err != nil {
+		fmt.Println("Unable to exec DeleteUser query: ", err)
+		json.NewEncoder(response).Encode(http.StatusBadRequest)
+		return
 	}
-	json.NewEncoder(response).Encode(users)
+	json.NewEncoder(response).Encode(http.StatusAccepted)
 }
 
 // UpdateUser update one user
@@ -85,15 +112,28 @@ func UpdateUser(response http.ResponseWriter, request *http.Request) {
 
 	response.Header().Set("Content-type", "application/json")
 	json.NewDecoder(request.Body).Decode(&user)
-	for index := range users {
-		if users[index].ID == params["id"] {
-			users[index].Email = user.Email
-			users[index].Password = user.Password
-			json.NewEncoder(response).Encode(users[index])
+	if user.Email == "" && user.Password == "" {
+		fmt.Println("Unable to UpdateUser: Email and Password cannot be empties")
+		json.NewEncoder(response).Encode(http.StatusBadRequest)
+		return
+	}
+	if user.Email != "" {
+		_, err := connection.Exec("UPDATE users SET email=$1 WHERE user_id=$2", user.Email, params["id"])
+		if err != nil {
+			fmt.Println("Unable to exec UpdateUser query: ", err)
+			json.NewEncoder(response).Encode(http.StatusBadRequest)
 			return
 		}
 	}
-	json.NewEncoder(response).Encode(users)
+	if user.Password != "" {
+		_, err := connection.Exec("UPDATE users SET password=$1 WHERE user_id=$2", user.Password, params["id"])
+		if err != nil {
+			fmt.Println("Unable to exec UpdateUser query: ", err)
+			json.NewEncoder(response).Encode(http.StatusBadRequest)
+			return
+		}
+	}
+	json.NewEncoder(response).Encode(http.StatusAccepted)
 }
 
 func initRoutes(router *mux.Router) {
@@ -107,12 +147,12 @@ func initRoutes(router *mux.Router) {
 func initDatabaseConnection() {
 	config, err := pgx.ParseEnvLibpq()
 	if err != nil {
-		fmt.Println(os.Stderr, "Unable to parse Postgre environment: ", err)
+		fmt.Println("Unable to parse Postgre environment: ", err)
 		os.Exit(1)
 	}
 	connection, err = pgx.Connect(config)
 	if err != nil {
-		fmt.Println(os.Stderr, "Connection to database failed: ", err)
+		fmt.Println("Connection to database failed: ", err)
 		os.Exit(1)
 	}
 }
@@ -121,7 +161,6 @@ func main() {
 	router := mux.NewRouter()
 
 	initDatabaseConnection()
-	//mockUserData()
 	initRoutes(router)
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
