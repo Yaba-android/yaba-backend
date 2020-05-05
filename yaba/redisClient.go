@@ -16,10 +16,10 @@ import (
 
 // Book struct
 type Book struct {
-	Name    string
-	Author  string
-	DatePub string
-	Path    string
+	Name     string
+	Author   string
+	DatePub  string
+	Filename string
 }
 
 func redisSetNewBook(client *redis.Client, book *Book) error {
@@ -29,7 +29,7 @@ func redisSetNewBook(client *redis.Client, book *Book) error {
 		return err
 	}
 	id := uuid.NewV5(uuid.NamespaceOID, book.Name)
-	err = client.HMSet("books", id, bookJSON).Err()
+	err = client.HMSet(RedisTableBooks, id, bookJSON).Err()
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -37,19 +37,27 @@ func redisSetNewBook(client *redis.Client, book *Book) error {
 	return err
 }
 
-func redisGetAllBooks(client *redis.Client) error {
-	books, err := client.HGetAll("books").Result()
+func redisGetAllBooks(client *redis.Client) []Book {
+	var bookObj Book
+	var booksSlice []Book
+
+	booksString, err := client.HGetAll(RedisTableBooks).Result()
 	if err != nil {
 		fmt.Println("error", err)
-		return err
+		return nil
 	}
-	printMap(books)
-	return err
+	for _, bookStr := range booksString {
+		bookBytes := []byte(bookStr)
+		err = json.Unmarshal(bookBytes, &bookObj)
+		booksSlice = append(booksSlice, bookObj)
+	}
+	printBookSlice(booksSlice)
+	return booksSlice
 }
 
 func redisStartClient() *redis.Client {
 	client := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: RedisHostAddr,
 	})
 	return client
 }
@@ -58,9 +66,9 @@ func redisIsClientConnected(client *redis.Client) error {
 	pong, err := client.Ping().Result()
 
 	if err != nil {
-		fmt.Println("error")
-	} else if pong == "PONG" {
-		fmt.Println("Connected")
+		fmt.Println("Redis error")
+	} else if pong == RedisPong {
+		fmt.Println("Redis connected")
 	}
 	return err
 }
