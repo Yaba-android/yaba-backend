@@ -24,7 +24,9 @@ func homeLink(w http.ResponseWriter, r *http.Request) {
 func addNewBookLink(w http.ResponseWriter, r *http.Request, client *redis.Client) {
 	nb := rand.Int63n(100)
 	title := concatStringInt("The Book", nb)
+
 	book := &Book{
+		RemoteId:  "",
 		ImagePath: "camus_la_peste.png", Title: title, Author: "John Doe", Rating: "4", NumberRating: "35", Price: "0",
 		Length: "324", Genre: "Roman", FileSize: "0.85", Country: "France", DatePublication: "10/09/2015",
 		Publisher: "Publish Inc.", Resume: "Super livre de fou", FilePath: "camus_la_peste.epub"}

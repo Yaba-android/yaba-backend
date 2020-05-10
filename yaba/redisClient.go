@@ -16,6 +16,7 @@ import (
 
 // Book struct
 type Book struct {
+	RemoteId        string
 	ImagePath       string
 	Title           string
 	Author          string
@@ -33,12 +34,14 @@ type Book struct {
 }
 
 func redisSetNewBook(client *redis.Client, book *Book) error {
+	id := uuid.NewV5(uuid.NamespaceOID, book.Title)
+
+	book.RemoteId = id.String()
 	bookJSON, err := json.Marshal(book)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-	id := uuid.NewV5(uuid.NamespaceOID, book.Title)
 	err = client.HMSet(RedisTableBooks, id, bookJSON).Err()
 	if err != nil {
 		fmt.Println(err)
