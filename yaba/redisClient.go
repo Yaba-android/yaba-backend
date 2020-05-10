@@ -16,10 +16,20 @@ import (
 
 // Book struct
 type Book struct {
-	Name     string
-	Author   string
-	DatePub  string
-	Filename string
+	ImagePath       string
+	Title           string
+	Author          string
+	Rating          string
+	NumberRating    string
+	Price           string
+	Length          string
+	Genre           string
+	FileSize        string
+	Country         string
+	DatePublication string
+	Publisher       string
+	Resume          string
+	FilePath        string
 }
 
 func redisSetNewBook(client *redis.Client, book *Book) error {
@@ -28,7 +38,7 @@ func redisSetNewBook(client *redis.Client, book *Book) error {
 		fmt.Println(err)
 		return err
 	}
-	id := uuid.NewV5(uuid.NamespaceOID, book.Name)
+	id := uuid.NewV5(uuid.NamespaceOID, book.Title)
 	err = client.HMSet(RedisTableBooks, id, bookJSON).Err()
 	if err != nil {
 		fmt.Println(err)
@@ -51,7 +61,7 @@ func redisGetAllBooks(client *redis.Client) []Book {
 		err = json.Unmarshal(bookBytes, &bookObj)
 		booksSlice = append(booksSlice, bookObj)
 	}
-	printBookSlice(booksSlice)
+	//printBookSlice(booksSlice)
 	return booksSlice
 }
 
