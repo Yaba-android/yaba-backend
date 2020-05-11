@@ -1,4 +1,4 @@
-module github.com/nasrat-v/Yaba-backend/yaba
+module github.com/nasrat-v/yaba-backend
 
 go 1.14
 
