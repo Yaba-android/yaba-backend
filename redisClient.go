@@ -20,12 +20,11 @@ func redisSetNewBook(client *redis.Client, book *Book) error {
 
 	book.RemoteId = id.String()
 	bookJSON, err := json.Marshal(book)
-	m["id"] = id
-	m["content"] = bookJSON
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
+	m[book.RemoteId] = bookJSON
 	err = client.HMSet(RedisTableBooks, m).Err()
 	if err != nil {
 		fmt.Println(err)
@@ -54,7 +53,9 @@ func redisGetAllBooks(client *redis.Client) []Book {
 
 func redisStartClient() *redis.Client {
 	client := redis.NewClient(&redis.Options{
-		Addr: RedisHostAddr,
+		Addr:     RedisHostAddr,
+		Password: PASSWORD, // from password.go (.gitignore)
+		DB:       0,
 	})
 	return client
 }

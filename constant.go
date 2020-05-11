@@ -1,7 +1,7 @@
 package main
 
 const (
-	RedisHostAddr   = "localhost:6379"
+	RedisHostAddr   = "34.77.144.138:6379"
 	RedisTableBooks = "Books"
 	RedisPong       = "PONG"
 	MuxRouterPort   = ":8080"
