@@ -15,15 +15,18 @@ import (
 ********************************/
 
 func redisSetNewBook(client *redis.Client, book *Book) error {
+	m := make(map[string]interface{})
 	id := uuid.NewV5(uuid.NamespaceOID, book.Title)
 
 	book.RemoteId = id.String()
 	bookJSON, err := json.Marshal(book)
+	m["id"] = id
+	m["content"] = bookJSON
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-	err = client.HMSet(RedisTableBooks, id, bookJSON).Err()
+	err = client.HMSet(RedisTableBooks, m).Err()
 	if err != nil {
 		fmt.Println(err)
 		return err
