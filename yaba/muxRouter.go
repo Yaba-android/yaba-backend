@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 
 	"github.com/go-redis/redis"
@@ -22,18 +21,24 @@ func homeLink(w http.ResponseWriter, r *http.Request) {
 }
 
 func addNewBookLink(w http.ResponseWriter, r *http.Request, client *redis.Client) {
-	nb := rand.Int63n(100)
-	title := concatStringInt("The Book", nb)
-
-	book := &Book{
-		RemoteId:  "",
-		ImagePath: "camus_la_peste.png", Title: title, Author: "John Doe", Rating: "4", NumberRating: "35", Price: "0",
-		Length: "324", Genre: "Roman", FileSize: "0.85", Country: "France", DatePublication: "10/09/2015",
-		Publisher: "Publish Inc.", Resume: "Super livre de fou", FilePath: "camus_la_peste.epub"}
+	var book Book
 
 	w.Header().Set("Content-type", "application/json")
-	redisSetNewBook(client, book)
-	w.Write([]byte("Book added"))
+	err := json.NewDecoder(r.Body).Decode(&book)
+	if err != nil {
+		fmt.Println("error: ", err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Error bad request"))
+	} else {
+		err = redisSetNewBook(client, &book)
+		if err != nil {
+			fmt.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Error internal server"))
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Book added"))
+	}
 }
 
 func getAllBooksLink(w http.ResponseWriter, r *http.Request, client *redis.Client) {
@@ -41,7 +46,8 @@ func getAllBooksLink(w http.ResponseWriter, r *http.Request, client *redis.Clien
 
 	w.Header().Set("Content-type", "application/json")
 	if books == nil {
-		w.Write([]byte("error"))
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Error bad request"))
 	}
 	json.NewEncoder(w).Encode(books)
 }
@@ -53,13 +59,17 @@ func startRouter(client *redis.Client) {
 		router.
 			PathPrefix(EbooksDir).
 			Handler(http.StripPrefix(EbooksDir, http.FileServer(http.Dir("."+EbooksDir))))
-		router.HandleFunc("/", homeLink)
+
+		router.HandleFunc("/", homeLink).Methods("GET")
+
 		router.HandleFunc("/addNewBook", func(w http.ResponseWriter, r *http.Request) {
 			addNewBookLink(w, r, client)
-		})
+		}).Methods("POST")
+
 		router.HandleFunc("/getAllBooks", func(w http.ResponseWriter, r *http.Request) {
 			getAllBooksLink(w, r, client)
-		})
+		}).Methods("GET")
+
 		log.Fatal(http.ListenAndServe(MuxRouterPort, router))
 	}
 }

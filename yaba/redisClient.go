@@ -14,25 +14,6 @@ import (
 *
 ********************************/
 
-// Book struct
-type Book struct {
-	RemoteId        string
-	ImagePath       string
-	Title           string
-	Author          string
-	Rating          string
-	NumberRating    string
-	Price           string
-	Length          string
-	Genre           string
-	FileSize        string
-	Country         string
-	DatePublication string
-	Publisher       string
-	Resume          string
-	FilePath        string
-}
-
 func redisSetNewBook(client *redis.Client, book *Book) error {
 	id := uuid.NewV5(uuid.NamespaceOID, book.Title)
 
@@ -56,7 +37,7 @@ func redisGetAllBooks(client *redis.Client) []Book {
 
 	booksString, err := client.HGetAll(RedisTableBooks).Result()
 	if err != nil {
-		fmt.Println("error", err)
+		fmt.Println("error: ", err)
 		return nil
 	}
 	for _, bookStr := range booksString {
