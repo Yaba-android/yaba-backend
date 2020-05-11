@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/go-redis/redis"
 	uuid "github.com/satori/go.uuid"
@@ -53,8 +54,8 @@ func redisGetAllBooks(client *redis.Client) []Book {
 
 func redisStartClient() *redis.Client {
 	client := redis.NewClient(&redis.Options{
-		Addr:     RedisHostAddr,
-		Password: PASSWORD, // from password.go (.gitignore)
+		Addr:     os.Getenv(RedisHostAddr),
+		Password: os.Getenv(RedisDbPassword),
 		DB:       0,
 	})
 	return client

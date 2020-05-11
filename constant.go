@@ -1,7 +1,8 @@
 package main
 
 const (
-	RedisHostAddr   = "34.77.144.138:6379"
+	RedisHostAddr   = "REDIS_HOST_ADDR"
+	RedisDbPassword = "REDIS_DB_PASSWORD"
 	RedisTableBooks = "Books"
 	RedisPong       = "PONG"
 	MuxRouterPort   = ":8080"
