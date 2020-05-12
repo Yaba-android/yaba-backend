@@ -71,6 +71,6 @@ func startRouter(client *redis.Client) {
 			getAllBooksLink(w, r, client)
 		}).Methods("GET")
 
-		log.Fatal(http.ListenAndServe(os.Getenv(MuxRouterPort), router))
+		log.Fatal(http.ListenAndServe(":"+os.Getenv(MuxRouterPort), router))
 	}
 }
