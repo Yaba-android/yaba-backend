@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/go-redis/redis"
 	"github.com/gorilla/mux"
@@ -70,6 +71,6 @@ func startRouter(client *redis.Client) {
 			getAllBooksLink(w, r, client)
 		}).Methods("GET")
 
-		log.Fatal(http.ListenAndServe(MuxRouterPort, router))
+		log.Fatal(http.ListenAndServe(os.Getenv(MuxRouterPort), router))
 	}
 }
