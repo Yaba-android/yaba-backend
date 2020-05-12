@@ -5,7 +5,8 @@ type Book struct {
 	RemoteId        string
 	ImagePath       string
 	Title           string
-	Author          string
+	AuthorName      string
+	AuthorId        string
 	Rating          string
 	NumberRating    string
 	Price           string
