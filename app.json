@@ -1,0 +1,12 @@
+{
+  "name": "yaba-backend",
+  "description": "Go backend for yaba android app",
+  "keywords": [
+    "yaba-backend",
+    "go",
+    "android",
+    "redis"
+  ],
+  "website": "https://yaba-backend-heroku.herokuapp.com",
+  "repository": "https://github.com/Yaba-android/yaba-backend"
+}
