@@ -115,6 +115,40 @@ func getBookLink(w http.ResponseWriter, r *http.Request, client *redis.Client) {
 	json.NewEncoder(w).Encode(book)
 }
 
+func addNewGenreLink(w http.ResponseWriter, r *http.Request, client *redis.Client) {
+	var genre Genre
+
+	w.Header().Set("Content-type", "application/json")
+	err := json.NewDecoder(r.Body).Decode(&genre)
+	if err != nil {
+		fmt.Println("error: ", err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Error bad request"))
+	} else {
+		genreAdded := redisSetNewGenre(client, &genre)
+		if genreAdded == nil {
+			fmt.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Error internal server"))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(genreAdded)
+	}
+}
+
+func getAllGenresLink(w http.ResponseWriter, r *http.Request, client *redis.Client) {
+	genres := redisGetAllGenres(client)
+
+	w.Header().Set("Content-type", "application/json")
+	if genres == nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("Error not found"))
+		return
+	}
+	json.NewEncoder(w).Encode(genres)
+}
+
 func startRouter(client *redis.Client) {
 	if redisIsClientConnected(client) == nil {
 		router := mux.NewRouter().StrictSlash(true)
@@ -147,6 +181,14 @@ func startRouter(client *redis.Client) {
 
 		router.HandleFunc("/book/{RemoteId}", func(w http.ResponseWriter, r *http.Request) {
 			getBookLink(w, r, client)
+		}).Methods("GET")
+
+		router.HandleFunc("/genre", func(w http.ResponseWriter, r *http.Request) {
+			addNewGenreLink(w, r, client)
+		}).Methods("POST")
+
+		router.HandleFunc("/genres", func(w http.ResponseWriter, r *http.Request) {
+			getAllGenresLink(w, r, client)
 		}).Methods("GET")
 
 		log.Fatal(http.ListenAndServe(":"+os.Getenv(MuxRouterPort), router))

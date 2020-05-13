@@ -129,6 +129,46 @@ func redisGetBookById(client *redis.Client, remoteId string) *Book {
 	return &bookObj
 }
 
+func redisSetNewGenre(client *redis.Client, genre *Genre) *Genre {
+	m := make(map[string]interface{})
+	id := uuid.NewV5(uuid.NamespaceOID, genre.Name)
+
+	genre.RemoteId = id.String()
+	genreJSON, err := json.Marshal(genre)
+	if err != nil {
+		fmt.Println("setNewGenre Marshal error: ", err)
+		return nil
+	}
+	m[genre.RemoteId] = genreJSON
+	err = client.HMSet(RedisTableGenres, m).Err()
+	if err != nil {
+		fmt.Println("setNewGenre error: ", err)
+		return nil
+	}
+	return genre
+}
+
+func redisGetAllGenres(client *redis.Client) []Genre {
+	var genreObj Genre
+	var genresSlice []Genre
+
+	genresString, err := client.HGetAll(RedisTableGenres).Result()
+	if err != nil {
+		fmt.Println("getAllGenres error: ", err)
+		return nil
+	}
+	for _, genreStr := range genresString {
+		bookBytes := []byte(genreStr)
+		err = json.Unmarshal(bookBytes, &genreObj)
+		if err != nil {
+			fmt.Println("getAllGenres Unmarshal error: ", err)
+			return nil
+		}
+		genresSlice = append(genresSlice, genreObj)
+	}
+	return genresSlice
+}
+
 func redisStartClient() *redis.Client {
 	client := redis.NewClient(&redis.Options{
 		Addr:     os.Getenv(RedisHostAddr),
